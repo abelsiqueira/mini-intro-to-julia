@@ -17,6 +17,9 @@ end
 # ╔═╡ b593e470-78ca-11ef-3649-0d6b29f7557b
 using Plots, PlutoUI, Random, LinearAlgebra, ForwardDiff
 
+# ╔═╡ b0489720-16ad-40dc-b289-9c9dc70d306e
+html"<button onclick='present()'>present</button>"
+
 # ╔═╡ 8bddf575-ae55-43b8-b975-9d32fadbca0c
 md"""
 # Mini-intro to Julia
@@ -28,6 +31,9 @@ md"""
 """
 
 # ╔═╡ d3cff052-2cef-44bb-add5-7328019fa392
+x = 10
+
+# ╔═╡ 723844a9-17db-4e7a-87a6-01b63d72b639
 
 
 # ╔═╡ beefacce-7929-4046-998d-56d7798f5ddd
@@ -45,9 +51,21 @@ md"""
 ### Multiple dispatch
 """
 
+# ╔═╡ 78594949-79fa-4dc4-806d-08d86152d5fb
+md"""
+#### Example: quote Strings
+"""
+
+# ╔═╡ 1b9f3436-c0f5-485c-8cea-2bba120b1e2f
+md"""
+#### Example: Newton method on user-defined function
+
+$$x_{k+1} = x_k - \nabla^2 f(x_k)^{-1} \nabla f(x_k)$$
+"""
+
 # ╔═╡ 9931a66b-33fc-411c-a628-e87dc9194b1d
 md"""
-learning rate = $(@bind ui_lr Slider(-8:0.1:0))
+learning rate = $(@bind ui_lr Slider(-6:0.1:0))
 """
 
 # ╔═╡ 98b00f0c-c902-45e5-82e3-0ec1255c2978
@@ -61,19 +79,19 @@ begin
 	struct Dice <: AbstractDice
 		sides :: Int
 	end
-	struct OpOnDices{Op,DiceType} <: AbstractDice
+	struct OpOnDices{Op,DiceType <: AbstractDice} <: AbstractDice
 		dices :: Vector{DiceType}
 	end
 	
 	d6, d12, d20 = Dice(6), Dice(12), Dice(20)
 
 	roll(d :: Dice) = rand(1:d.sides)
-	# Base.:(+)(dices :: DiceType...) where {DiceType} = OpOnDices{+,DiceType}([dices...])
-	function roll(op_on_dices :: OpOnDices{Op,DiceType}) where {Op, DiceType}
+	Base.:+(dices :: DiceType...) where {DiceType <: AbstractDice} = OpOnDices{+,DiceType}([dices...])
+	function roll(op_on_dices :: OpOnDices{Op,DiceType}) where {Op, DiceType <: AbstractDice}
 		Op(roll.(op_on_dices.dices)...)
 	end
-	Base.:(*)(n :: Int, d :: DiceType) where {DiceType} = OpOnDices{+,DiceType}(fill(d, n))
-	function drop_lowest(op_on_dices :: OpOnDices{Op, DiceType}, n) where {Op, DiceType}
+	Base.:*(n :: Int, d :: DiceType) where {DiceType <: AbstractDice} = OpOnDices{+,DiceType}(fill(d, n))
+	function drop_lowest(op_on_dices :: OpOnDices{Op, DiceType}, n) where {Op, DiceType <: AbstractDice}
 		drop_op(v...) = Op(sort([v...], rev=true)[1:end-n]...)
 		return OpOnDices{drop_op, DiceType}(op_on_dices.dices)
 	end
@@ -90,6 +108,9 @@ begin
 		return result_count
 	end
 end
+
+# ╔═╡ 09a330f3-4322-469c-a938-58d4009f8665
+y = 2x + 1
 
 # ╔═╡ 47464b2c-9cb2-4d7e-be99-8651902f0eb2
 let
@@ -171,9 +192,15 @@ end
 
 # ╔═╡ 3942f95e-ed99-446e-93b7-cac20a4332e1
 begin
-	fun_2d(x) = (x[1] - 1)^2 + 100 * (x[2] - x[1]^2)^2
+	fun_2d(x) = (x[1] - 1)^2 + 100 * (x[2] - x[1]^2)^2 + exp(-0.1 * log(x[2]^2 + 1))
 	x0 = [-1.5; 1.0]
 end
+
+# ╔═╡ 16c901ea-bf1b-4c2a-be00-7e8b882846f7
+ForwardDiff.gradient(fun_2d, x0)
+
+# ╔═╡ 9e857cbe-63fe-40fd-924d-271a788c962f
+ForwardDiff.hessian(fun_2d, x0)
 
 # ╔═╡ dde1183b-7cc0-45c6-b88f-4353d1879320
 let
@@ -181,7 +208,7 @@ let
 	yrange = (-2, 2)
 	N = 100
 
-	max_k = 500
+	max_k = 50
 	X = zeros(2, max_k)
 	X[:, 1] .= x0
 	for i = 2:max_k
@@ -199,36 +226,17 @@ let
 		levels = 100,
 	)
 	title!("Newton method")
-	scatter!([x0[1]], [x0[2]], m=(2,:red,stroke()), leg=false)
-	plot!(X[1, :], X[2, :], l=:red)
+	plot!(X[1, :], X[2, :], l=:pink, m=(1,:red,stroke(0)))
 end
 
-# ╔═╡ d48a32b5-2360-4d87-bf9f-ea4030f86cbc
-roll(d6)
+# ╔═╡ a05d69bf-4183-486e-9bfa-8c66c2aa193f
+d20 |> roll
 
-# ╔═╡ 9c58ae8d-71c3-4ef1-9e90-59585ec0ec3b
-bar(histogram(d6, 10_000))
+# ╔═╡ d5a86c83-0371-4d72-b4d2-4c18e54cc251
+bar(histogram(d20, 100_000))
 
-# ╔═╡ d6a858e2-604c-45da-bfce-3eeeced2e629
-bar(histogram(d6 + d6, 10_000))
-
-# ╔═╡ dcabaa4b-8fb6-43d8-b0a9-6346471180a6
-bar(histogram(4d6, 100_000))
-
-# ╔═╡ 2054494a-bfe2-43c2-9fce-21e7b5e1f2a9
-drop_lowest(4d6, 1) |> roll
-
-# ╔═╡ 4cab5c5d-793a-4c3d-ab7a-d15ec3992093
+# ╔═╡ 4a2e193a-71b4-435d-a4d6-c2f595bf65f5
 bar(histogram(drop_lowest(4d6, 1), 100_000))
-
-# ╔═╡ f8038c43-3b80-4b19-ab7b-4a65804a595e
-OpOnDices{+,Dice}([d6, d6])
-
-# ╔═╡ 12d5f900-9ebc-4e17-a2da-f59d32e53000
-stat_roll = drop_lowest(4 * d6, 1)
-
-# ╔═╡ fb358ae6-6f0d-40b3-a82e-6dcd4d0b223b
-@code_warntype roll(stat_roll)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1456,29 +1464,30 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═b593e470-78ca-11ef-3649-0d6b29f7557b
+# ╟─b0489720-16ad-40dc-b289-9c9dc70d306e
+# ╟─b593e470-78ca-11ef-3649-0d6b29f7557b
 # ╟─8bddf575-ae55-43b8-b975-9d32fadbca0c
 # ╟─1c72a8fb-1ad6-4540-bc0d-b8fd5676bc44
 # ╠═d3cff052-2cef-44bb-add5-7328019fa392
-# ╠═beefacce-7929-4046-998d-56d7798f5ddd
-# ╠═47464b2c-9cb2-4d7e-be99-8651902f0eb2
+# ╠═09a330f3-4322-469c-a938-58d4009f8665
+# ╠═723844a9-17db-4e7a-87a6-01b63d72b639
+# ╟─beefacce-7929-4046-998d-56d7798f5ddd
+# ╟─47464b2c-9cb2-4d7e-be99-8651902f0eb2
 # ╟─dad4d2b7-cba5-42a5-a682-96750149e312
 # ╟─84df6a7a-274e-4e84-b49a-66272912c5a3
 # ╟─cee35502-efd1-40c4-b279-7618ad5bebf9
-# ╠═b68039c6-f2e9-461a-8dd6-1e7022e3896d
+# ╟─78594949-79fa-4dc4-806d-08d86152d5fb
+# ╟─b68039c6-f2e9-461a-8dd6-1e7022e3896d
+# ╟─1b9f3436-c0f5-485c-8cea-2bba120b1e2f
 # ╠═3942f95e-ed99-446e-93b7-cac20a4332e1
-# ╠═9931a66b-33fc-411c-a628-e87dc9194b1d
+# ╠═16c901ea-bf1b-4c2a-be00-7e8b882846f7
+# ╠═9e857cbe-63fe-40fd-924d-271a788c962f
+# ╟─9931a66b-33fc-411c-a628-e87dc9194b1d
 # ╠═dde1183b-7cc0-45c6-b88f-4353d1879320
 # ╟─98b00f0c-c902-45e5-82e3-0ec1255c2978
 # ╠═7698d0c2-8478-4692-98e0-f8372e07d92d
-# ╠═d48a32b5-2360-4d87-bf9f-ea4030f86cbc
-# ╠═9c58ae8d-71c3-4ef1-9e90-59585ec0ec3b
-# ╠═d6a858e2-604c-45da-bfce-3eeeced2e629
-# ╠═dcabaa4b-8fb6-43d8-b0a9-6346471180a6
-# ╠═2054494a-bfe2-43c2-9fce-21e7b5e1f2a9
-# ╠═4cab5c5d-793a-4c3d-ab7a-d15ec3992093
-# ╠═f8038c43-3b80-4b19-ab7b-4a65804a595e
-# ╠═12d5f900-9ebc-4e17-a2da-f59d32e53000
-# ╠═fb358ae6-6f0d-40b3-a82e-6dcd4d0b223b
+# ╠═a05d69bf-4183-486e-9bfa-8c66c2aa193f
+# ╠═d5a86c83-0371-4d72-b4d2-4c18e54cc251
+# ╠═4a2e193a-71b4-435d-a4d6-c2f595bf65f5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
