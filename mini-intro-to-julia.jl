@@ -31,10 +31,7 @@ md"""
 """
 
 # ╔═╡ d3cff052-2cef-44bb-add5-7328019fa392
-x = 10
-
-# ╔═╡ 723844a9-17db-4e7a-87a6-01b63d72b639
-
+x = exp(10) / 100
 
 # ╔═╡ beefacce-7929-4046-998d-56d7798f5ddd
 md"""
@@ -60,7 +57,7 @@ md"""
 md"""
 #### Example: Newton method on user-defined function
 
-$$x_{k+1} = x_k - \nabla^2 f(x_k)^{-1} \nabla f(x_k)$$
+$$x_{k+1} = x_k - \alpha \times \nabla^2 f(x_k)^{-1} \nabla f(x_k)$$
 """
 
 # ╔═╡ 9931a66b-33fc-411c-a628-e87dc9194b1d
@@ -78,17 +75,34 @@ begin
 	abstract type AbstractDice end
 	struct Dice <: AbstractDice
 		sides :: Int
+		Dice(n :: Int) = n ≥ 2 ? new(n) : error("number of sides should be ≥ 2")
+	end
+	struct Constant <: AbstractDice
+		value :: Int
 	end
 	struct OpOnDices{Op,DiceType <: AbstractDice} <: AbstractDice
 		dices :: Vector{DiceType}
+	end
+	struct OpTwoDices{Op,DT1 <: AbstractDice, DT2 <: AbstractDice} <: AbstractDice
+		dice1 :: DT1
+		dice2 :: DT2
 	end
 	
 	d6, d12, d20 = Dice(6), Dice(12), Dice(20)
 
 	roll(d :: Dice) = rand(1:d.sides)
-	Base.:+(dices :: DiceType...) where {DiceType <: AbstractDice} = OpOnDices{+,DiceType}([dices...])
+	roll(d :: Constant) = d.value
+	Base.:+(dices :: DiceType...) where {DiceType <: AbstractDice} =
+		OpOnDices{+,DiceType}([dices...])
+	Base.:+(d1 :: DT1, d2 :: DT2) where {DT1 <: AbstractDice, DT2 <: AbstractDice} =
+		OpTwoDices{+,DT1,DT2}(d1, d2)
+	Base.:+(d :: DT, x :: Int) where {DT <: AbstractDice} =
+		d + Constant(x)
 	function roll(op_on_dices :: OpOnDices{Op,DiceType}) where {Op, DiceType <: AbstractDice}
 		Op(roll.(op_on_dices.dices)...)
+	end
+	function roll(op_two_dices :: OpTwoDices{Op,DT1,DT2}) where {Op, DT1 <: AbstractDice, DT2 <: AbstractDice}
+		Op(roll(op_two_dices.dice1), roll(op_two_dices.dice2))
 	end
 	Base.:*(n :: Int, d :: DiceType) where {DiceType <: AbstractDice} = OpOnDices{+,DiceType}(fill(d, n))
 	function drop_lowest(op_on_dices :: OpOnDices{Op, DiceType}, n) where {Op, DiceType <: AbstractDice}
@@ -192,7 +206,7 @@ end
 
 # ╔═╡ 3942f95e-ed99-446e-93b7-cac20a4332e1
 begin
-	fun_2d(x) = (x[1] - 1)^2 + 100 * (x[2] - x[1]^2)^2 + exp(-0.1 * log(x[2]^2 + 1))
+	fun_2d(x) = (x[1] - 1)^2 + 4 * (x[2] - x[1]^2)^2 + 1e-4 * sin(x[1] * exp(x[2]))
 	x0 = [-1.5; 1.0]
 end
 
@@ -229,14 +243,14 @@ let
 	plot!(X[1, :], X[2, :], l=:pink, m=(1,:red,stroke(0)))
 end
 
-# ╔═╡ a05d69bf-4183-486e-9bfa-8c66c2aa193f
-d20 |> roll
+# ╔═╡ bc6c436e-6240-4534-9e5a-139f76dbbdc5
+d6 |> roll
 
-# ╔═╡ d5a86c83-0371-4d72-b4d2-4c18e54cc251
-bar(histogram(d20, 100_000))
+# ╔═╡ 59dd486f-8360-4114-897c-dc459ea39f5c
+bar(histogram(drop_lowest(4d6, 1), 10_000))
 
-# ╔═╡ 4a2e193a-71b4-435d-a4d6-c2f595bf65f5
-bar(histogram(drop_lowest(4d6, 1), 100_000))
+# ╔═╡ 1dd20730-702c-41a2-9585-5c43af25eecd
+4 * d6 + 5
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -257,9 +271,9 @@ PlutoUI = "~0.7.60"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.0-rc3"
+julia_version = "1.10.5"
 manifest_format = "2.0"
-project_hash = "6e2787140cc504890a1057e86bb5aaad986aeeac"
+project_hash = "dcdb4e4fbf34d22e90050b53880a143df7afb3b8"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -269,15 +283,13 @@ version = "1.3.2"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
-version = "1.1.2"
+version = "1.1.1"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
-version = "1.11.0"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
-version = "1.11.0"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
@@ -376,7 +388,6 @@ version = "0.18.20"
 [[deps.Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
-version = "1.11.0"
 
 [[deps.Dbus_jll]]
 deps = ["Artifacts", "Expat_jll", "JLLWrappers", "Libdl"]
@@ -445,7 +456,6 @@ version = "4.4.4+1"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
-version = "1.11.0"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
@@ -562,7 +572,6 @@ version = "0.2.5"
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
-version = "1.11.0"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
@@ -607,9 +616,9 @@ version = "3.0.0+1"
 
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "e16271d212accd09d52ee0ae98956b8a05c4b626"
+git-tree-sha1 = "78211fb6cbc872f77cad3fc0b6cf647d923f4929"
 uuid = "1d63c593-3942-5779-bab2-d838dc0a180e"
-version = "17.0.6+0"
+version = "18.1.7+0"
 
 [[deps.LZO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -646,17 +655,16 @@ version = "0.6.4"
 [[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
-version = "8.6.0+0"
+version = "8.4.0+0"
 
 [[deps.LibGit2]]
 deps = ["Base64", "LibGit2_jll", "NetworkOptions", "Printf", "SHA"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
-version = "1.11.0"
 
 [[deps.LibGit2_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll"]
 uuid = "e37daf67-58a4-590a-8e99-b0245dd2ffc5"
-version = "1.7.2+0"
+version = "1.6.4+0"
 
 [[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
@@ -665,7 +673,6 @@ version = "1.11.0+1"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
-version = "1.11.0"
 
 [[deps.Libffi_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -718,7 +725,6 @@ version = "2.40.1+0"
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-version = "1.11.0"
 
 [[deps.LogExpFunctions]]
 deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
@@ -738,7 +744,6 @@ version = "0.3.28"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
-version = "1.11.0"
 
 [[deps.LoggingExtras]]
 deps = ["Dates", "Logging"]
@@ -760,7 +765,6 @@ version = "0.5.13"
 [[deps.Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
-version = "1.11.0"
 
 [[deps.MbedTLS]]
 deps = ["Dates", "MbedTLS_jll", "MozillaCACerts_jll", "NetworkOptions", "Random", "Sockets"]
@@ -771,7 +775,7 @@ version = "1.1.9"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.6+0"
+version = "2.28.2+1"
 
 [[deps.Measures]]
 git-tree-sha1 = "c13304c81eec1ed3af7fc20e75fb6b26092a1102"
@@ -786,11 +790,10 @@ version = "1.2.0"
 
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
-version = "1.11.0"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2023.12.12"
+version = "2023.1.10"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -811,7 +814,7 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.27+1"
+version = "0.3.23+4"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -876,13 +879,9 @@ uuid = "30392449-352a-5448-841d-b1acce4e97dc"
 version = "0.43.4+0"
 
 [[deps.Pkg]]
-deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "Random", "SHA", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.11.0"
-weakdeps = ["REPL"]
-
-    [deps.Pkg.extensions]
-    REPLExt = "REPL"
+version = "1.10.0"
 
 [[deps.PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
@@ -937,7 +936,6 @@ version = "1.4.3"
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-version = "1.11.0"
 
 [[deps.Qt6Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Vulkan_Loader_jll", "Xorg_libSM_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_cursor_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "libinput_jll", "xkbcommon_jll"]
@@ -964,14 +962,12 @@ uuid = "e99dba38-086e-5de3-a5b1-6e4c66e897c3"
 version = "6.7.1+1"
 
 [[deps.REPL]]
-deps = ["InteractiveUtils", "Markdown", "Sockets", "StyledStrings", "Unicode"]
+deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
-version = "1.11.0"
 
 [[deps.Random]]
 deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-version = "1.11.0"
 
 [[deps.RecipesBase]]
 deps = ["PrecompileTools"]
@@ -1014,7 +1010,6 @@ version = "1.2.1"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
-version = "1.11.0"
 
 [[deps.Showoff]]
 deps = ["Dates", "Grisu"]
@@ -1023,13 +1018,12 @@ uuid = "992d4aef-0814-514b-bc4d-f2e9a6c4116f"
 version = "1.0.3"
 
 [[deps.SimpleBufferStream]]
-git-tree-sha1 = "874e8867b33a00e784c8a7e4b60afe9e037b74e1"
+git-tree-sha1 = "f305871d2f381d21527c770d4788c06c097c9bc1"
 uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
-version = "1.1.0"
+version = "1.2.0"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
-version = "1.11.0"
 
 [[deps.SortingAlgorithms]]
 deps = ["DataStructures"]
@@ -1040,7 +1034,7 @@ version = "1.2.1"
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-version = "1.11.0"
+version = "1.10.0"
 
 [[deps.SpecialFunctions]]
 deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
@@ -1060,14 +1054,9 @@ uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 version = "1.4.3"
 
 [[deps.Statistics]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "ae3bb1eb3bba077cd276bc5cfc337cc65c3075c0"
+deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-version = "1.11.1"
-weakdeps = ["SparseArrays"]
-
-    [deps.Statistics.extensions]
-    SparseArraysExt = ["SparseArrays"]
+version = "1.10.0"
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
@@ -1081,14 +1070,10 @@ git-tree-sha1 = "5cf7606d6cef84b543b483848d4ae08ad9832b21"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.34.3"
 
-[[deps.StyledStrings]]
-uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
-version = "1.11.0"
-
 [[deps.SuiteSparse_jll]]
 deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
-version = "7.7.0+0"
+version = "7.2.1+1"
 
 [[deps.TOML]]
 deps = ["Dates"]
@@ -1109,7 +1094,6 @@ version = "0.1.1"
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-version = "1.11.0"
 
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "e84b3a11b9bece70d14cce63406bbc79ed3464d2"
@@ -1129,11 +1113,9 @@ version = "1.5.1"
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
-version = "1.11.0"
 
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
-version = "1.11.0"
 
 [[deps.UnicodeFun]]
 deps = ["REPL"]
@@ -1437,7 +1419,7 @@ version = "1.1.6+0"
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
-version = "1.59.0+0"
+version = "1.52.0+1"
 
 [[deps.p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1470,24 +1452,23 @@ version = "1.4.1+1"
 # ╟─1c72a8fb-1ad6-4540-bc0d-b8fd5676bc44
 # ╠═d3cff052-2cef-44bb-add5-7328019fa392
 # ╠═09a330f3-4322-469c-a938-58d4009f8665
-# ╠═723844a9-17db-4e7a-87a6-01b63d72b639
 # ╟─beefacce-7929-4046-998d-56d7798f5ddd
-# ╟─47464b2c-9cb2-4d7e-be99-8651902f0eb2
+# ╠═47464b2c-9cb2-4d7e-be99-8651902f0eb2
 # ╟─dad4d2b7-cba5-42a5-a682-96750149e312
 # ╟─84df6a7a-274e-4e84-b49a-66272912c5a3
 # ╟─cee35502-efd1-40c4-b279-7618ad5bebf9
 # ╟─78594949-79fa-4dc4-806d-08d86152d5fb
-# ╟─b68039c6-f2e9-461a-8dd6-1e7022e3896d
+# ╠═b68039c6-f2e9-461a-8dd6-1e7022e3896d
 # ╟─1b9f3436-c0f5-485c-8cea-2bba120b1e2f
 # ╠═3942f95e-ed99-446e-93b7-cac20a4332e1
 # ╠═16c901ea-bf1b-4c2a-be00-7e8b882846f7
 # ╠═9e857cbe-63fe-40fd-924d-271a788c962f
 # ╟─9931a66b-33fc-411c-a628-e87dc9194b1d
-# ╠═dde1183b-7cc0-45c6-b88f-4353d1879320
+# ╟─dde1183b-7cc0-45c6-b88f-4353d1879320
 # ╟─98b00f0c-c902-45e5-82e3-0ec1255c2978
 # ╠═7698d0c2-8478-4692-98e0-f8372e07d92d
-# ╠═a05d69bf-4183-486e-9bfa-8c66c2aa193f
-# ╠═d5a86c83-0371-4d72-b4d2-4c18e54cc251
-# ╠═4a2e193a-71b4-435d-a4d6-c2f595bf65f5
+# ╠═bc6c436e-6240-4534-9e5a-139f76dbbdc5
+# ╠═59dd486f-8360-4114-897c-dc459ea39f5c
+# ╠═1dd20730-702c-41a2-9585-5c43af25eecd
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
