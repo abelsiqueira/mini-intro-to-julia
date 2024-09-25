@@ -17,9 +17,6 @@ end
 # ╔═╡ b593e470-78ca-11ef-3649-0d6b29f7557b
 using Plots, PlutoUI, Random, LinearAlgebra, ForwardDiff
 
-# ╔═╡ b0489720-16ad-40dc-b289-9c9dc70d306e
-html"<button onclick='present()'>present</button>"
-
 # ╔═╡ 8bddf575-ae55-43b8-b975-9d32fadbca0c
 md"""
 # Mini-intro to Julia
@@ -31,7 +28,10 @@ md"""
 """
 
 # ╔═╡ d3cff052-2cef-44bb-add5-7328019fa392
-x = exp(10) / 100
+x = 1
+
+# ╔═╡ 09a330f3-4322-469c-a938-58d4009f8665
+
 
 # ╔═╡ beefacce-7929-4046-998d-56d7798f5ddd
 md"""
@@ -122,9 +122,6 @@ begin
 		return result_count
 	end
 end
-
-# ╔═╡ 09a330f3-4322-469c-a938-58d4009f8665
-y = 2x + 1
 
 # ╔═╡ 47464b2c-9cb2-4d7e-be99-8651902f0eb2
 let
@@ -243,14 +240,17 @@ let
 	plot!(X[1, :], X[2, :], l=:pink, m=(1,:red,stroke(0)))
 end
 
-# ╔═╡ bc6c436e-6240-4534-9e5a-139f76dbbdc5
-d6 |> roll
+# ╔═╡ 97cc44b5-e564-4384-abe4-afdcf9f3a12f
+d6
 
-# ╔═╡ 59dd486f-8360-4114-897c-dc459ea39f5c
-bar(histogram(drop_lowest(4d6, 1), 10_000))
+# ╔═╡ e0697963-685a-4e77-b3b9-3e08497d84e9
+fire_branded_greataxe = 1d12 + 2d6 + 5
 
-# ╔═╡ 1dd20730-702c-41a2-9585-5c43af25eecd
-4 * d6 + 5
+# ╔═╡ 049651e4-0986-4b01-b110-927311c91079
+roll(2d6 + 3)
+
+# ╔═╡ 9e49b511-55b5-4773-a073-4cd0abadd44c
+histogram(2d6, 10_000) |> bar
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1446,8 +1446,7 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╟─b0489720-16ad-40dc-b289-9c9dc70d306e
-# ╟─b593e470-78ca-11ef-3649-0d6b29f7557b
+# ╠═b593e470-78ca-11ef-3649-0d6b29f7557b
 # ╟─8bddf575-ae55-43b8-b975-9d32fadbca0c
 # ╟─1c72a8fb-1ad6-4540-bc0d-b8fd5676bc44
 # ╠═d3cff052-2cef-44bb-add5-7328019fa392
@@ -1467,8 +1466,9 @@ version = "1.4.1+1"
 # ╟─dde1183b-7cc0-45c6-b88f-4353d1879320
 # ╟─98b00f0c-c902-45e5-82e3-0ec1255c2978
 # ╠═7698d0c2-8478-4692-98e0-f8372e07d92d
-# ╠═bc6c436e-6240-4534-9e5a-139f76dbbdc5
-# ╠═59dd486f-8360-4114-897c-dc459ea39f5c
-# ╠═1dd20730-702c-41a2-9585-5c43af25eecd
+# ╠═97cc44b5-e564-4384-abe4-afdcf9f3a12f
+# ╠═e0697963-685a-4e77-b3b9-3e08497d84e9
+# ╠═049651e4-0986-4b01-b110-927311c91079
+# ╠═9e49b511-55b5-4773-a073-4cd0abadd44c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
